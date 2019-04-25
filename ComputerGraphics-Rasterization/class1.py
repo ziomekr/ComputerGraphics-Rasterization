@@ -1,16 +1,13 @@
 from abc import ABC, abstractmethod
 from PIL import Image, ImageTk
-from tkinter import Tk, Frame, Menu, Button, Canvas, PhotoImage
-from tkinter import LEFT, TOP, X, FLAT, RAISED, NW
+from tkinter import Tk, Frame, Menu, Button, Radiobutton, Canvas, PhotoImage, IntVar
+from tkinter import LEFT, TOP, X, FLAT, RAISED, NW, RIGHT
 import sys
 import constants
 from math import sqrt, pi, acos, modf, floor, ceil
 import numpy as np
 
-class ToolbarImage(object):
-   def open(img_name):
-        return Image.open(img_name).resize((constants.TOOLBAR_ITEM_WIDTH,constants.TOOLBAR_ITEM_HEIGHT), Image.ANTIALIAS)
-        
+ 
 class Example(Frame):
   
     def __init__(self):
@@ -22,18 +19,46 @@ class Example(Frame):
     def initUI(self):
       
         self.master.title(constants.APP_NAME)
-        
+        self.thickness = 5
         
         toolbar = Frame(self.master, bd=0, relief=RAISED)
 
-        self.img = ToolbarImage.open("pen-15.png")
-        eimg = ImageTk.PhotoImage(self.img)  
+        v = IntVar()
+        midpoint_line_button = Radiobutton(toolbar, text="Midpoint Line",variable=v, value=1,
+                                           indicatoron=0, command=self.button1_click)
+        midpoint_line_button.pack(side=LEFT)
 
-        exitButton = Button(toolbar, image=eimg, relief=FLAT,
-            command=self.onExit, height = constants.TOOLBAR_ITEM_HEIGHT, width = constants.TOOLBAR_ITEM_WIDTH)
-        exitButton.image = eimg
-        exitButton.pack(side=LEFT, padx=2, pady=2)
-       
+        symmetric_midpoint_line_button = Radiobutton(toolbar, text="Symmetric midpoint Line", variable=v, value=2,
+            indicatoron=0, command=self.button2_click)
+        symmetric_midpoint_line_button.pack(side=LEFT)
+
+        dda_line_button = Radiobutton(toolbar, text="DDA Line", variable=v, value=3,
+            indicatoron=0, command=self.button3_click)
+        dda_line_button.pack(side=LEFT)
+
+        midpoint_circle_button = Radiobutton(toolbar, text="Midpoint Circle", variable=v, value=4,
+            indicatoron=0, command=self.button4_click)
+        midpoint_circle_button.pack(side=LEFT)
+
+        midpoint_circle_add_only_button = Radiobutton(toolbar, text="Midpoint Circle ADD", variable=v, value=5,
+            indicatoron=0, command=self.button5_click)
+        midpoint_circle_add_only_button.pack(side=LEFT)
+
+        gupta_sproul_button = Radiobutton(toolbar, text="Gupta Sproul Line", variable=v, value=6,
+            indicatoron=0, command=self.button6_click)
+        gupta_sproul_button.pack(side=LEFT)
+
+        wu_line_button = Radiobutton(toolbar, text="WU Line", variable=v, value=7,
+            indicatoron=0, command=self.button7_click)
+        wu_line_button.pack(side=LEFT)
+
+        wu_circle_button = Radiobutton(toolbar, text="WU Circle", variable=v, value=8,
+            indicatoron=0, command=self.button8_click)
+        wu_circle_button.pack(side=LEFT)
+
+        reset_button = Button(toolbar, text="Reset canvas", command=self.button9_click)
+        reset_button.pack(side=RIGHT)
+
         toolbar.pack(side=TOP, fill=X)
 
         self.drawingArea = Canvas(self.master, cursor="circle", bg="#FFFFFF")
@@ -41,9 +66,7 @@ class Example(Frame):
         Tk.update(self)
         x = self.drawingArea.winfo_width()
 
-        #self.image = PhotoImage(width=1920, height=1200)
-        
-        self.image = np.zeros([600,800,3],dtype=np.uint8)
+        self.image = np.zeros([1200,1400,3],dtype=np.uint8)
         self.image.fill(255)
         self.img =  ImageTk.PhotoImage(image=Image.fromarray(self.image))
        
@@ -55,8 +78,44 @@ class Example(Frame):
         self.pack()
         
        
-    def onExit(self):
-        self.master
+    def button1_click(self):
+        self.shape = MidpointLine(self.thickness)
+        self.pen = Pen((0,0,0))
+
+    def button2_click(self):
+        self.shape = SymmetricMidpointLine(self.thickness)
+        self.pen = Pen((0,0,0))
+
+    def button3_click(self):
+        self.shape = DDALine(self.thickness)
+        self.pen = Pen((0,0,0))
+    
+    def button4_click(self):
+        self.shape = MidpointCircle(self.thickness)
+        self.pen = Pen((0,0,0))
+    
+    def button5_click(self):
+        self.shape = MidpointCircleAdditionsOnly(self.thickness)
+        self.pen = Pen((0,0,0))
+
+    def button6_click(self):
+        self.shape = AntiAliasedGuptaSproullLine(self.thickness)
+        self.pen = AntialiasedPen((255,255,255),(0,0,0))
+
+    def button7_click(self):
+        self.shape = WuAntialiasedLine(self.thickness)
+        self.pen = AntialiasedPen((255,255,255),(0,0,0))
+
+    def button8_click(self):
+        self.shape = WuAntialiasedCircleDrawer(self.thickness)
+        self.pen = AntialiasedPen((255,255,255),(0,0,0))
+    
+    def button9_click(self):
+        self.image = np.zeros([1200,1920,3],dtype=np.uint8)
+        self.image.fill(255)
+        self.img =  ImageTk.PhotoImage(image=Image.fromarray(self.image))
+        self.drawingArea.itemconfig(self.test, image=self.img)
+        Tk.update(self)  
 
     def setStartingPoint(self, event):
         self.x_start = event.x
@@ -64,11 +123,9 @@ class Example(Frame):
 
     def drawTempLine(self, event):
         self.tmpImg = self.image.copy()
-        #MidpointCircleDrawer(self.tmpImg, CircularBrush(51)).draw(self.x_start, self.y_start, event.x, event.y)
-        #CircularBrush(31).draw_point(self.tmpImg, 1, 100,100)
-        c = WuAntialiasedLine(9)
-        c.draw(self.x_start, self.y_start, event.x, event.y)
-        AntialiasedPen((255,255,255), (0,0,0)).draw_shape(self.tmpImg, c.shape_pixels)
+        self.shape.reset_shape()
+        self.shape.draw(self.x_start, self.y_start, event.x, event.y)
+        self.pen.draw_shape(self.tmpImg, self.shape.shape_pixels)
         self.img = ImageTk.PhotoImage(image=Image.fromarray(self.tmpImg))
         self.drawingArea.itemconfig(self.test, image=self.img)
         Tk.update(self)      
@@ -87,6 +144,8 @@ class Shape(ABC):
     @abstractmethod
     def draw(self, x_start, y_start, x_end, y_end):
         pass
+    def reset_shape(self):
+        self.shape_pixels = []
 
     def pixel_copy(self, x, y, **kwargs):      
         #Function by default expands pixels horizontally, optional argument vertical=True to switch expanding axis
@@ -289,6 +348,9 @@ class MidpointCircleAdditionsOnly(MidpointCircle):
 
 class AntiAliasedGuptaSproullLine(Shape):
     def draw(self, x_start, y_start, x_end, y_end):
+        if self.thickness_offset == 0:
+            self.thickness_offset = 1
+
         if abs(y_end - y_start) < abs(x_end-x_start):
             if x_start > x_end:
                 self.plot_x_domain(x_end, y_end, x_start, y_start, self.thickness_offset)
@@ -425,7 +487,7 @@ class WuAntialiasedLine(MidpointLine):
             y0 += 1
 
 
-class WuAntialiasedCircleDrawer(Shape):
+class WuAntialiasedCircleDrawer(MidpointCircle):
     def draw(self, x_start, y_start, x_end, y_end):
         x_center = round((x_start + x_end) / 2)
         y_center = round((y_start + y_start) / 2)
@@ -435,103 +497,39 @@ class WuAntialiasedCircleDrawer(Shape):
     def __plot_circle(self, x_center, y_center, radius):
         x = 0
         y = radius
-        self.brush.draw_point(x_center, y_center + y)
-        self.brush.draw_point(x_center, y_center - y)
-        self.brush.draw_point(x_center - y, y_center)
-        self.brush.draw_point(x_center + y, y_center)
+        self.shape_pixels.append((x_center, y_center + y, 1))
+        self.shape_pixels.append((x_center, y_center - y, 1))
+        self.shape_pixels.append((x_center - y, y_center, 1))
+        self.shape_pixels.append((x_center + y, y_center, 1))
         while y > x:
             x += 1
             y = ceil(sqrt(radius**2 - x**2))
             T = y - sqrt(radius**2 - x**2)
-            color2 = self.lerp("#FFFFFF", "#000000", T)
-            color1 = self.lerp("#000000", "#FFFFFF", T)
             
-            self.brush.draw_point(x_center + x, y_center + y, color=color1)
-            self.brush.draw_point(x_center + x, y_center + y - 1, color=color2)
+            self.shape_pixels.append((x_center + x, y_center + y, 1-T))
+            self.shape_pixels.append((x_center + x, y_center + y - 1, T))
             
-            self.brush.draw_point(x_center - x, y_center + y, color=color1)
-            self.brush.draw_point(x_center - x, y_center + y - 1, color=color2)
+            self.shape_pixels.append((x_center - x, y_center + y, 1-T))
+            self.shape_pixels.append((x_center - x, y_center + y - 1, T))
             
-            self.brush.draw_point(x_center + x, y_center - y, color=color1)
-            self.brush.draw_point(x_center + x, y_center - y + 1, color=color2)
+            self.shape_pixels.append((x_center + x, y_center - y, 1-T))
+            self.shape_pixels.append((x_center + x, y_center - y + 1, T))
 
-            self.brush.draw_point(x_center - x, y_center - y, color=color1)
-            self.brush.draw_point(x_center - x, y_center - y + 1, color=color2)
+            self.shape_pixels.append((x_center - x, y_center - y, 1-T))
+            self.shape_pixels.append((x_center - x, y_center - y + 1, T))
             
-            self.brush.draw_point(x_center + y, y_center + x, color=color1)
-            self.brush.draw_point(x_center + y - 1, y_center + x, color=color2)
+            self.shape_pixels.append((x_center + y, y_center + x, 1-T))
+            self.shape_pixels.append((x_center + y - 1, y_center + x, T))
             
-            self.brush.draw_point(x_center - y, y_center + x, color=color1)
-            self.brush.draw_point(x_center - y + 1, y_center + x, color=color2)
+            self.shape_pixels.append((x_center - y, y_center + x, 1-T))
+            self.shape_pixels.append((x_center - y + 1, y_center + x, T))
             
-            self.brush.draw_point(x_center + y, y_center - x, color=color1)
-            self.brush.draw_point(x_center + y - 1, y_center - x, color=color2)
+            self.shape_pixels.append((x_center + y, y_center - x, 1-T))
+            self.shape_pixels.append((x_center + y - 1, y_center - x, T))
 
-            self.brush.draw_point(x_center - y, y_center - x, color=color1)
-            self.brush.draw_point(x_center - y + 1, y_center - x, color=color2)
-
-class PixelCopyPen(object):
-    def __init__(self, thickness):
-        self.thickness = thickness
-
-    def draw_vertical(self, image, color, x, y):
-        if x > -1 and y > -1:
-            offset = int((self.thickness-1)/2)
-            try:
-                image[y-offset : y+offset,x] = (0,0,0)
-            except:
-                #Pixel out of bounds
-                return   
-
-    def draw_horizontal(self, image, color, x, y):
-        if x > -1 and y > -1:
-            offset = int((self.thickness-1)/2)
-            try:
-                image[y, x-offset : x+offset] = (0,0,0)
-            except:
-                #Pixel out of bounds
-                return
-
-class Brush(object):
-    def __init__(self, thickness):
-        self.thickness = thickness
-    def set_pixels(self, image, color, starting_point, offset):
-        x,y = starting_point    
-        ydim, xdim, null = image.shape
-        if y > -1 and y < ydim:
-            for xi in range(x - offset, x + offset):
-                #if xi > -1 and xi < xdim:
-                image[y, xi] = (0,0,0)
-                
-class CircularBrush(Brush):
-    def __init__(self, thickness):
-        self.thickness = thickness
-    
-    def draw_point(self, image, color, x, y):
-        ydim, xdim, null = image.shape
-        thickness_offset = int((self.thickness-1)/2)
-        for x_offset in range (0, thickness_offset+1):
-                y_offset = thickness_offset - x_offset
-                self.set_pixels(image,color, (x, y-y_offset), x_offset)
-                self.set_pixels(image,color, (x, y+y_offset), x_offset)
-                   
-                              
-            
-
-
-class SquareBrush(Brush):
-    def __init__(self, thickness):
-        self.thickness = thickness
-    
-    def draw_point(self, image, color, x, y):
-        ydim, xdim, null = image.shape
-        if x > -1 and y > -1:
-            x_offset = int((self.thickness-1)/2)
-            for i in range (0, x_offset):
-                y_offset = x_offset - i
-                if x - x_offset > -1 and y - y_offset > -1 and x + x_offset < xdim and y + y_offset < ydim:
-                    image[y-y_offset : y+y_offset, x-x_offset : x+x_offset] = (0,0,0)
-                
+            self.shape_pixels.append((x_center - y, y_center - x, 1-T))
+            self.shape_pixels.append((x_center - y + 1, y_center - x, T))
+             
 
 class Pen(object):
     def __init__(self, color):
